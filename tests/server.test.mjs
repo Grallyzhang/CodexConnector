@@ -13,7 +13,7 @@ test('protected deployment imports atomically and persists across restarts',asyn
  const authorization='Basic '+Buffer.from('admin:test-password-long-enough').toString('base64');
  let child;
  const start=async()=>{
-  child=spawn(process.execPath,['server.mjs'],{env:{...process.env,NODE_ENV:'production',HOST:'127.0.0.1',PORT:String(port),DATA_DIR:directory,DASHBOARD_PASSWORD:'test-password-long-enough',DASHBOARD_USERNAME:'admin'},stdio:['ignore','pipe','pipe']});
+  child=spawn(process.execPath,['server.mjs'],{env:{...process.env,NODE_ENV:'production',HOST:'127.0.0.1',PORT:String(port),DATA_DIR:directory,DASHBOARD_PASSWORD:'test-password-long-enough',DASHBOARD_USERNAME:'admin',GOOGLE_REFRESH_TOKEN:''},stdio:['ignore','pipe','pipe']});
   await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('startup timeout')),10000);child.stdout.once('data',()=>{clearTimeout(timer);resolve();});child.once('error',reject);child.once('exit',code=>{clearTimeout(timer);reject(Error('startup exit '+code));});});
  };
  const stop=async()=>{if(child&&child.exitCode===null){const done=once(child,'exit');child.kill();await done;}};
@@ -24,6 +24,13 @@ test('protected deployment imports atomically and persists across restarts',asyn
   assert.equal((await fetch(base+'/health')).status,200);
   assert.equal((await fetch(base+'/data.json')).status,401);
   assert.equal((await fetch(base+'/')).status,401);
+  assert.equal((await fetch(base+'/api/sync')).status,401);
+  const syncStatus=await (await fetch(base+'/api/sync',{headers:{authorization}})).json();
+  assert.equal(syncStatus.configuration.ready,false);
+  assert.ok(syncStatus.configuration.missing.includes('GOOGLE_REFRESH_TOKEN'));
+  assert.equal((await fetch(base+'/api/sync',{method:'POST',headers:{authorization}})).status,403);
+  assert.equal((await fetch(base+'/api/sync',{method:'POST',headers:{authorization,'Content-Type':'application/json','X-Dashboard-Request':'sync'},body:JSON.stringify({start:'2026-09-01',end:'2026-09-01'})})).status,400);
+  assert.equal((await fetch(base+'/api/sync/cancel',{method:'POST',headers:{authorization}})).status,403);
   assert.equal((await fetch(base+'/',{headers:{authorization}})).status,200);
   assert.equal((await fetch(base+'/data.json',{headers:{authorization}})).status,404);
   assert.equal((await fetch(base+'/api/import',{method:'POST',headers:{authorization}})).status,403);

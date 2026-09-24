@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test tests/server.test.mjs",
+    "test": "node --test tests/server.test.mjs tests/sync.test.mjs",
     "test:reports": "node --test tests/dashboard.test.mjs"
   },
   "engines": {

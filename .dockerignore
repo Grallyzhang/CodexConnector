@@ -4,3 +4,7 @@
 !server.mjs
 !dist/
 !dist/**
+!data-store.mjs
+!sync.mjs
+!sync-jobs.mjs
+!family-rules.mjs
